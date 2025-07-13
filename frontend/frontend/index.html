@@ -7,22 +7,62 @@
 </head>
 <body>
   <h1>映画リコメンダー</h1>
+
+  <!-- ① トレンド期間のドロップダウン -->
+  <select id="period-select">
+    <option value="day">日刊トレンド</option>
+    <option value="week" selected>週刊トレンド</option>
+    <option value="month">月刊トレンド</option>
+  </select>
+
+  <!-- ② キーワード検索フォーム -->
+  <input type="text" id="query-input" placeholder="キーワードで検索" />
+
   <button id="recommend-btn">おすすめ映画を取得</button>
-  <p id="result"></p>
+
+  <!-- 結果表示 -->
+  <div id="result">
+    <h2 id="movie-title"></h2>
+    <img id="movie-poster" src="" alt="" style="max-width:300px; display:none;" />
+    <p id="movie-overview"></p>
+    <p id="movie-rating"></p>
+  </div>
 
   <script>
     const btn = document.getElementById('recommend-btn');
-    const result = document.getElementById('result');
+    const resultTitle = document.getElementById('movie-title');
+    const resultPoster = document.getElementById('movie-poster');
+    const resultOverview = document.getElementById('movie-overview');
+    const resultRating = document.getElementById('movie-rating');
+    const periodSelect = document.getElementById('period-select');
+    const queryInput = document.getElementById('query-input');
 
     btn.addEventListener('click', () => {
-      fetch('/recommend')
+      const period = periodSelect.value;
+      const query = queryInput.value.trim();
+      let url = `/recommend?period=${period}`;
+      if (query) {
+        url += `&query=${encodeURIComponent(query)}`;
+      }
+
+      // まず /recommend で ID とタイトルを取る
+      fetch(url)
         .then(res => res.json())
         .then(data => {
-          result.textContent = data.title;
+          // 次に /movie/{id} で詳細を取りに行く
+          return fetch(`/movie/${data.id}`);
+        })
+        .then(res => res.json())
+        .then(info => {
+          resultTitle.textContent = info.title;
+          resultOverview.textContent = info.overview;
+          resultRating.textContent = `評価: ${info.rating}`;
+          resultPoster.src = info.poster_url;
+          resultPoster.style.display = 'block';
         })
         .catch(err => {
           console.error(err);
-          result.textContent = 'エラーが発生しました';
+          resultTitle.textContent = 'エラーが発生しました';
         });
     });
   </script>
