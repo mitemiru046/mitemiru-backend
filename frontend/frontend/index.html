@@ -1,87 +1,66 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>映画リコメンダー</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  …
 </head>
 <body>
   <h1>映画リコメンダー</h1>
 
-  <!-- ① トレンド期間のドロップダウン -->
-  <select id="period-select">
-    <option value="day">日刊トレンド</option>
-    <option value="week" selected>週刊トレンド</option>
-    <option value="month">月刊トレンド</option>
-  </select>
-
-  <!-- ② キーワード検索フォーム -->
+  <select id="period-select">…</select>
   <input type="text" id="query-input" placeholder="キーワードで検索" />
-
   <button id="recommend-btn">おすすめ映画を取得</button>
 
-  <!-- 結果表示 -->
-  <div id="result">
-    <h2 id="movie-title"></h2>
-    <img id="movie-poster" src="" alt="" style="max-width:300px; display:none;" />
-    <p id="movie-overview"></p>
-    <p id="movie-rating"></p>
-  </div>
++ <!-- ① ローディングメッセージを追加 -->
++ <p id="loading" style="display:none; text-align:center;">読み込み中…</p>
+
+  <div id="result">…</div>
 
   <script>
-  const btn           = document.getElementById('recommend-btn');
-  const resultTitle   = document.getElementById('movie-title');
-  const resultPoster  = document.getElementById('movie-poster');
-  const resultOverview= document.getElementById('movie-overview');
-  const resultRating  = document.getElementById('movie-rating');
-  const periodSelect  = document.getElementById('period-select');
-  const queryInput    = document.getElementById('query-input');
+    // ② ここから下に「loading」を読むコードを追加
+    const btn          = document.getElementById('recommend-btn');
+    const periodSelect = document.getElementById('period-select');
+    const queryInput   = document.getElementById('query-input');
+    const resultTitle  = document.getElementById('movie-title');
+    const resultOverview = document.getElementById('movie-overview');
+    const resultRating   = document.getElementById('movie-rating');
++   const loading      = document.getElementById('loading');
 
-  async function fetchJSON(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`API Error: ${res.status}`);
-    return await res.json();
-  }
+    btn.addEventListener('click', () => {
+      // ③ 押した瞬間のUI
+      btn.disabled = true;
+      periodSelect.disabled = true;
+      queryInput.disabled = true;
++     loading.style.display = 'block';    // 読み込み中 メッセージ表示
+      resultTitle.textContent = '';
+      resultOverview.textContent = '';
+      resultRating.textContent = '';
 
-  btn.addEventListener('click', async () => {
-    // ボタンを読み込み中に
-    btn.disabled = true;
-    btn.textContent = '読み込み中…';
-    resultTitle.textContent    = '';
-    resultOverview.textContent = '';
-    resultRating.textContent   = '';
-    resultPoster.style.display = 'none';
-
-    try {
       const period = periodSelect.value;
       const query  = queryInput.value.trim();
       let url = `/recommend?period=${period}`;
       if (query) url += `&query=${encodeURIComponent(query)}`;
 
-      // 1) /recommend を呼び出し
-      const data = await fetchJSON(url);
-      if (!data.id) {
-        // 結果がゼロ件
-        resultTitle.textContent = '該当する映画が見つかりませんでした';
-        return;
-      }
-
-      // 2) /movie/{id} を呼び出し
-      const info = await fetchJSON(`/movie/${data.id}`);
-      resultTitle.textContent    = info.title;
-      resultOverview.textContent = info.overview;
-      resultRating.textContent   = `評価: ${info.rating}`;
-      resultPoster.src           = info.poster_url;
-      resultPoster.style.display = 'block';
-    } catch (err) {
-      console.error(err);
-      resultTitle.textContent = 'エラーが発生しました';
-    } finally {
-      // ボタンを元に戻す
-      btn.disabled = false;
-      btn.textContent = 'おすすめ映画を取得';
-    }
-  });
-</script>
+      fetch(url)
+        .then(res => res.json())
+        .then(data => fetch(`/movie/${data.id}`))
+        .then(res => res.json())
+        .then(info => {
+          resultTitle.textContent    = info.title;
+          resultOverview.textContent = info.overview;
+          resultRating.textContent   = `評価: ${info.rating}`;
+        })
+        .catch(err => {
+          console.error(err);
+          resultTitle.textContent = 'エラーが発生しました';
+        })
+        .finally(() => {
+          // ④ 終了時のUIリセット
+          loading.style.display = 'none';    // 読み込み中 メッセージ消す
+          btn.disabled = false;
+          periodSelect.disabled = false;
+          queryInput.disabled = false;
+        });
+    });
+  </script>
 </body>
 </html>
