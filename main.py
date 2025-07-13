@@ -32,24 +32,23 @@ def health():
 
 # 推薦エンドポイント
 @app.get("/recommend")
-def recommend(period: Optional[str] = "day", query: Optional[str] = None):
-    """
-    period: day / week / month
-    query: 検索キーワード
-    """
-    if query:
-        # キーワード検索
-        url = (
-            "https://api.themoviedb.org/3/search/movie"
-            f"?api_key={TMDB_KEY}&language=ja-JP&query={requests.utils.quote(query)}"
-        )
-        results = requests.get(url, timeout=10).json().get("results", [])
-    else:
-        # トレンド取得
-        url = (
-            f"https://api.themoviedb.org/3/trending/movie/{period}"
-            f"?api_key={TMDB_KEY}&language=ja-JP"
-        )
+ def recommend(period: Optional[str] = "day", query: Optional[str] = None):
+-    # キーワード検索／トレンド取得の URL を組み立て…
++    # TMDB のトレンドは day/week のみ → month が来たら week にフォールバック
++    if period not in ("day", "week"):
++        period = "week"
+
+     if query:
+         # キーワード検索…
+     else:
+-        url = (
+-            f"https://api.themoviedb.org/3/trending/movie/{period}"
+-            f"?api_key={TMDB_KEY}&language=ja-JP"
+-        )
++        url = (
++            f"https://api.themoviedb.org/3/trending/movie/{period}"
++            f"?api_key={TMDB_KEY}&language=ja-JP"
++        )
         results = requests.get(url, timeout=10).json().get("results", [])
 
     if not results:
