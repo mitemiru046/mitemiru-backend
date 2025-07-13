@@ -1,33 +1,30 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from dotenv import load_dotenv
 import os, random, requests
 
-# 環境変数読み込み
+# .env を読み込む
 load_dotenv(Path(__file__).parent / ".env")
 TMDB_KEY = os.getenv("TMDB_KEY")
 
 app = FastAPI()
 
-# CORS （ローカルと本番両方からOKに）
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5500",
-        "https://axiomatic-trip-production.up.railway.app"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# ① frontend フォルダを静的ファイルとして公開
+app.mount(
+    "/static",
+    StaticFiles(directory=Path(__file__).parent / "frontend" / "frontend"),
+    name="static",
 )
 
-# ─── 追加 ───
-# frontend フォルダを /static 以下で配信
-app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
-# ───────────
+# ② ルートにアクセスが来たら index.html を返す
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    html_path = Path(__file__).parent / "frontend" / "frontend" / "index.html"
+    return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
+# 既存の /health と /recommend はそのまま
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -40,4 +37,3 @@ def recommend():
     )
     movie = random.choice(requests.get(url, timeout=10).json()["results"])
     return {"title": movie["title"]}
-    

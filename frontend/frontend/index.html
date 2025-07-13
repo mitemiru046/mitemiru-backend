@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>映画リコメンダー</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <h1>映画リコメンダー</h1>
@@ -15,7 +15,7 @@
     const result = document.getElementById('result');
 
     btn.addEventListener('click', () => {
-      fetch('https://axiomatic-trip-production.up.railway.app/recommend')
+      fetch('/recommend')
         .then(res => res.json())
         .then(data => {
           result.textContent = data.title;
