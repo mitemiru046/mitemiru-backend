@@ -33,3 +33,7 @@ button:hover {
   font-size: 1.2rem;
   margin-top: 1rem;
 }
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

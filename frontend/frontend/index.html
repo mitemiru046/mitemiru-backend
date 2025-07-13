@@ -29,42 +29,59 @@
   </div>
 
   <script>
-    const btn = document.getElementById('recommend-btn');
-    const resultTitle = document.getElementById('movie-title');
-    const resultPoster = document.getElementById('movie-poster');
-    const resultOverview = document.getElementById('movie-overview');
-    const resultRating = document.getElementById('movie-rating');
-    const periodSelect = document.getElementById('period-select');
-    const queryInput = document.getElementById('query-input');
+  const btn           = document.getElementById('recommend-btn');
+  const resultTitle   = document.getElementById('movie-title');
+  const resultPoster  = document.getElementById('movie-poster');
+  const resultOverview= document.getElementById('movie-overview');
+  const resultRating  = document.getElementById('movie-rating');
+  const periodSelect  = document.getElementById('period-select');
+  const queryInput    = document.getElementById('query-input');
 
-    btn.addEventListener('click', () => {
+  async function fetchJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API Error: ${res.status}`);
+    return await res.json();
+  }
+
+  btn.addEventListener('click', async () => {
+    // ボタンを読み込み中に
+    btn.disabled = true;
+    btn.textContent = '読み込み中…';
+    resultTitle.textContent    = '';
+    resultOverview.textContent = '';
+    resultRating.textContent   = '';
+    resultPoster.style.display = 'none';
+
+    try {
       const period = periodSelect.value;
-      const query = queryInput.value.trim();
+      const query  = queryInput.value.trim();
       let url = `/recommend?period=${period}`;
-      if (query) {
-        url += `&query=${encodeURIComponent(query)}`;
+      if (query) url += `&query=${encodeURIComponent(query)}`;
+
+      // 1) /recommend を呼び出し
+      const data = await fetchJSON(url);
+      if (!data.id) {
+        // 結果がゼロ件
+        resultTitle.textContent = '該当する映画が見つかりませんでした';
+        return;
       }
 
-      // まず /recommend で ID とタイトルを取る
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          // 次に /movie/{id} で詳細を取りに行く
-          return fetch(`/movie/${data.id}`);
-        })
-        .then(res => res.json())
-        .then(info => {
-          resultTitle.textContent = info.title;
-          resultOverview.textContent = info.overview;
-          resultRating.textContent = `評価: ${info.rating}`;
-          resultPoster.src = info.poster_url;
-          resultPoster.style.display = 'block';
-        })
-        .catch(err => {
-          console.error(err);
-          resultTitle.textContent = 'エラーが発生しました';
-        });
-    });
-  </script>
+      // 2) /movie/{id} を呼び出し
+      const info = await fetchJSON(`/movie/${data.id}`);
+      resultTitle.textContent    = info.title;
+      resultOverview.textContent = info.overview;
+      resultRating.textContent   = `評価: ${info.rating}`;
+      resultPoster.src           = info.poster_url;
+      resultPoster.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+      resultTitle.textContent = 'エラーが発生しました';
+    } finally {
+      // ボタンを元に戻す
+      btn.disabled = false;
+      btn.textContent = 'おすすめ映画を取得';
+    }
+  });
+</script>
 </body>
 </html>
