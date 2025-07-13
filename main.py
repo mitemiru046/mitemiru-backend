@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -25,56 +25,53 @@ async def serve_frontend():
     html_path = Path(__file__).parent / "frontend" / "frontend" / "index.html"
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
-# 既存の /health はそのまま
+# 健康チェック
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-# /recommend?period=day|week|month&query=キーワード
+# 推薦エンドポイント
 @app.get("/recommend")
-def recommend(
-    period: Optional[str] = "day",
-    query: Optional[str] = None
-):
+def recommend(period: Optional[str] = "day", query: Optional[str] = None):
+    """
+    period: day / week / month
+    query: 検索キーワード
+    """
     if query:
         # キーワード検索
         url = (
             "https://api.themoviedb.org/3/search/movie"
-            f"?api_key={TMDB_KEY}&language=ja-JP&query={query}"
+            f"?api_key={TMDB_KEY}&language=ja-JP&query={requests.utils.quote(query)}"
         )
+        results = requests.get(url, timeout=10).json().get("results", [])
     else:
         # トレンド取得
-        if period not in ("day", "week", "month"):
-            raise HTTPException(status_code=400, detail="period must be day/week/month")
         url = (
             f"https://api.themoviedb.org/3/trending/movie/{period}"
             f"?api_key={TMDB_KEY}&language=ja-JP"
         )
+        results = requests.get(url, timeout=10).json().get("results", [])
 
-    resp = requests.get(url, timeout=10)
-    data = resp.json().get("results")
-    if not data:
-        raise HTTPException(status_code=404, detail="no movies found")
-    movie = random.choice(data)
-    # 映画 ID も返す
-    return {"id": movie["id"], "title": movie["title"]}
+    if not results:
+        return {"id": None, "title": "該当する映画がありません"}
+    movie = random.choice(results)
+    return {"id": movie.get("id"), "title": movie.get("title")}
 
-# /movie/{movie_id} で詳細を返す
+# 作品詳細取得エンドポイント
 @app.get("/movie/{movie_id}")
 def movie_detail(movie_id: int):
+    """
+    movie_id から TMDB の詳細情報を取りに行きます
+    """
     url = (
         f"https://api.themoviedb.org/3/movie/{movie_id}"
         f"?api_key={TMDB_KEY}&language=ja-JP"
     )
-    resp = requests.get(url, timeout=10)
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail="movie not found")
-    info = resp.json()
+    data = requests.get(url, timeout=10).json()
     return {
-        "id": info["id"],
-        "title": info["title"],
-        "overview": info.get("overview", ""),
-        "rating": info.get("vote_average", 0),
-        # フル URL を組み立てる
-        "poster_url": f"https://image.tmdb.org/t/p/w300{info.get('poster_path', '')}"
+        "title": data.get("title"),
+        "overview": data.get("overview"),
+        "rating": data.get("vote_average"),
+        # フル URL にしておく
+        "poster_url": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}"
     }
