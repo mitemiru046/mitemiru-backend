@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>映画リコメンダー</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>映画リコメンダー</h1>
+  <button id="recommend-btn">おすすめ映画を取得</button>
+  <p id="result"></p>
+
+  <script>
+    const btn = document.getElementById('recommend-btn');
+    const result = document.getElementById('result');
+
+    btn.addEventListener('click', () => {
+      fetch('https://axiomatic-trip-production.up.railway.app/recommend')
+        .then(res => res.json())
+        .then(data => {
+          result.textContent = data.title;
+        })
+        .catch(err => {
+          console.error(err);
+          result.textContent = 'エラーが発生しました';
+        });
+    });
+  </script>
+</body>
+</html>
